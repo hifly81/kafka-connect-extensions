@@ -83,10 +83,9 @@ public class ConversionUtility {
 
     }
 
-    public static String printOracleRaw(String base64) {
+    public static RAW oracleRawFromBase64(String base64) {
         byte[] rawBytes = java.util.Base64.getDecoder().decode(base64);
-        RAW rawValue = new RAW(rawBytes);
-        return rawValue.stringValue();
+        return new RAW(rawBytes);
 
     }
 

@@ -1,5 +1,6 @@
 package org.hifly.kafka;
 
+import oracle.sql.RAW;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.json.JSONObject;
 import org.junit.Assert;
@@ -7,7 +8,7 @@ import org.junit.Test;
 
 import java.util.UUID;
 
-public class KeyConvertersTestCase {
+public class ConversionUtilityTest {
 
     private static final String KEY = "_id";
     private static final String RAW_DEFAULT_VALUE = "00000000000000000000000000000000";
@@ -31,6 +32,18 @@ public class KeyConvertersTestCase {
         String value = commonValidators(result);
         JSONObject obj = new JSONObject(value);
         Assert.assertEquals(RAW_DEFAULT_VALUE, obj.get(KEY));
+    }
+
+    @Test
+    public void testStringToOracleRaw () {
+        RAW raw1 = ConversionUtility.oracleRawFromBase64("QJqZ6oyvgFbgQwqgAKeAVg==");
+        RAW raw2 = ConversionUtility.oracleRawFromBase64("R03X4+ygcETgQwqgAKdwRA==");
+        RAW raw3 = ConversionUtility.oracleRawFromBase64("W03X4+ygcETgQwqgAKdwZA==");
+
+        Assert.assertEquals(raw1.getBytes().length, RAW_BYTE_SIZE);
+        Assert.assertEquals(raw2.getBytes().length, RAW_BYTE_SIZE);
+        Assert.assertEquals(raw3.getBytes().length, RAW_BYTE_SIZE);
+
     }
 
     private static String commonValidators(SchemaAndValue result) {

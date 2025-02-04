@@ -20,8 +20,8 @@ public class ExplodeJsonString<R extends ConnectRecord<R>> implements Transforma
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     public static final String ROWKEY_CONFIG = "valuename";
-    public static final String OVERVIEW_DOC = "Create a struct for a JSON Field";
-    private static final String PURPOSE = "Create a struct for a JSON Field.";
+    public static final String OVERVIEW_DOC = "Create a Struct for a JSON Field";
+    private static final String PURPOSE = "Create a Struct for a JSON Field.";
 
     public static final ConfigDef CONFIG_DEF = new ConfigDef()
             .define(ROWKEY_CONFIG, ConfigDef.Type.STRING, ConfigDef.NO_DEFAULT_VALUE, ConfigDef.Importance.HIGH, "JSON Field value to extract and .");
@@ -114,16 +114,12 @@ public class ExplodeJsonString<R extends ConnectRecord<R>> implements Transforma
                 // String value
                 schemaBuilder.field(fieldName, Schema.OPTIONAL_STRING_SCHEMA);
             } else if (value.isInt()) {
-                // Integer value
                 schemaBuilder.field(fieldName, Schema.OPTIONAL_INT32_SCHEMA);
             } else if (value.isLong()) {
-                // Long value
                 schemaBuilder.field(fieldName, Schema.OPTIONAL_INT64_SCHEMA);
             } else if (value.isBoolean()) {
-                // Boolean value
                 schemaBuilder.field(fieldName, Schema.OPTIONAL_BOOLEAN_SCHEMA);
             } else if (value.isDouble()) {
-                // Double value
                 schemaBuilder.field(fieldName, Schema.OPTIONAL_FLOAT64_SCHEMA);
             } else if (value.isBigDecimal()) {
                 // Big Decimal value

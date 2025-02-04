@@ -18,13 +18,13 @@ public class JsonKeyToValue<R extends ConnectRecord<R>> implements Transformatio
 
     public static final String IDKEY_CONFIG = "idkey";
 
-    public static final String OVERVIEW_DOC = "Add the record key to the value as a field.";
+    public static final String OVERVIEW_DOC = "Add message key to message value as a new field.";
 
     public static final ConfigDef CONFIG_DEF = new ConfigDef()
             .define(ROWKEY_CONFIG, ConfigDef.Type.STRING, ConfigDef.NO_DEFAULT_VALUE, ConfigDef.Importance.HIGH, "Field name to add.")
             .define(IDKEY_CONFIG, ConfigDef.Type.STRING, ConfigDef.NO_DEFAULT_VALUE, ConfigDef.Importance.HIGH, "Id name to compute.");
 
-    private static final String PURPOSE = "Add the record key to the value as a field.";
+    private static final String PURPOSE = "Add message key to message value as a new field.";
 
     private static final Logger log = LoggerFactory.getLogger(JsonKeyToValue.class);
 

@@ -29,7 +29,7 @@ public class OracleRawToBsonKeyConverter implements Converter {
         }
 
         try {
-            return BsonUtility.oracleRawToBson(value);
+            return ConversionUtility.oracleRawToBson(value);
         } catch (Exception e) {
             throw new DataException(e.getMessage());
         }

@@ -15,9 +15,9 @@ public class KeyConvertersTestCase {
 
     @Test
     public void testOracleRawToBson () {
-        byte [] b1 = BsonUtility.convertToOracleRaw(UUID.randomUUID());
+        byte [] b1 = ConversionUtility.convertToOracleRaw(UUID.randomUUID());
         Assert.assertEquals(b1.length, RAW_BYTE_SIZE);
-        SchemaAndValue result = BsonUtility.oracleRawToBson(b1);
+        SchemaAndValue result = ConversionUtility.oracleRawToBson(b1);
         String value = commonValidators(result);
         JSONObject obj = new JSONObject(value);
         Assert.assertNotEquals(RAW_DEFAULT_VALUE, obj.get(KEY));
@@ -27,7 +27,7 @@ public class KeyConvertersTestCase {
     @Test
     public void testOracleRawNullToBson () {
         byte [] b1 = new byte[RAW_BYTE_SIZE];
-        SchemaAndValue result = BsonUtility.oracleRawToBson(b1);
+        SchemaAndValue result = ConversionUtility.oracleRawToBson(b1);
         String value = commonValidators(result);
         JSONObject obj = new JSONObject(value);
         Assert.assertEquals(RAW_DEFAULT_VALUE, obj.get(KEY));

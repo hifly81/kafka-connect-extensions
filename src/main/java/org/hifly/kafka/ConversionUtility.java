@@ -12,10 +12,10 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class BsonUtility {
+public class ConversionUtility {
 
     private static final String KEY = "_id";
-    private static final Logger log = LoggerFactory.getLogger(BsonUtility.class);
+    private static final Logger log = LoggerFactory.getLogger(ConversionUtility.class);
 
     public static SchemaAndValue oracleRawToBson(byte[] value) {
 
@@ -80,6 +80,13 @@ public class BsonUtility {
         } catch (DecoderException e) {
             throw new RuntimeException(e);
         }
+
+    }
+
+    public static String printOracleRaw(String base64) {
+        byte[] rawBytes = java.util.Base64.getDecoder().decode(base64);
+        RAW rawValue = new RAW(rawBytes);
+        return rawValue.stringValue();
 
     }
 

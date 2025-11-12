@@ -40,6 +40,8 @@ public class ConversionUtilityTest {
         RAW raw2 = ConversionUtility.oracleRawFromBase64("R03X4+ygcETgQwqgAKdwRA==");
         RAW raw3 = ConversionUtility.oracleRawFromBase64("W03X4+ygcETgQwqgAKdwZA==");
 
+        System.out.println(raw1.stringValue());
+
         Assert.assertEquals(raw1.getBytes().length, RAW_BYTE_SIZE);
         Assert.assertEquals(raw2.getBytes().length, RAW_BYTE_SIZE);
         Assert.assertEquals(raw3.getBytes().length, RAW_BYTE_SIZE);

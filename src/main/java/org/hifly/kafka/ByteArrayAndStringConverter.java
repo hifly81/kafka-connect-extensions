@@ -33,7 +33,8 @@ public class ByteArrayAndStringConverter implements Converter, HeaderConverter {
     @Override
     public byte[] fromConnectData(String topic, Schema schema, Object value) {
         if (schema != null && schema.type() != Schema.Type.BYTES) {
-            if (schema.type() == Schema.Type.STRING && value instanceof String result) {
+            if (schema.type() == Schema.Type.STRING && value instanceof String) {
+                String result = (String)value;
                 log.debug("Received a string for KEY {} - its own byte [] representation with default charset will be sent", value);
                 return result.getBytes();
             }

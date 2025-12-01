@@ -3,7 +3,6 @@ package org.hifly.kafka;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
-import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.storage.Converter;
 import org.apache.kafka.connect.storage.ConverterConfig;
 import org.apache.kafka.connect.storage.HeaderConverter;
@@ -40,8 +39,10 @@ public class ByteArrayAndStringConverter implements Converter, HeaderConverter {
             }
         }
 
-        if (value != null && !(value instanceof byte[]))
-            throw new DataException("ByteArrayConverter is not compatible with objects of type " + value.getClass());
+        if (value != null && !(value instanceof byte[])) {
+            String msg = value.toString();
+            return msg.getBytes();
+        }
 
         return (byte[]) value;
     }

@@ -3,7 +3,6 @@ package org.hifly.kafka;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
-import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.hifly.kafka.smt.ExplodeJsonString;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,14 +27,14 @@ class ExplodeJsonStringTest {
 
     @Test
     void testTransformValidJson() {
-        // Define the schema for the record's value
+        // Schema for the record's value
         Schema schema = SchemaBuilder.struct()
                 .field("id", Schema.INT32_SCHEMA)
                 .field("name", Schema.STRING_SCHEMA)
                 .field("json_data", Schema.STRING_SCHEMA)
                 .build();
 
-        // Create a record with the json_data field containing JSON
+        // Record with the json_data field containing JSON
         Struct value = new Struct(schema)
                 .put("id", 123)
                 .put("name", "test")
@@ -51,20 +50,24 @@ class ExplodeJsonStringTest {
                 0
         );
 
-        // Apply the transformation
         SinkRecord transformedRecord = transformation.apply(record);
 
-        // Validate the result
         Struct transformedValue = (Struct) transformedRecord.value();
+
         assertNotNull(transformedValue);
-        assertEquals(123, transformedValue.getInt32("id"));
-        assertEquals("test", transformedValue.getString("name"));
+
+        // The NEW struct WON'T have "id" or "name": it has only JSON fields
         assertEquals("nestedValue", transformedValue.getString("nestedField"));
-        assertEquals("42", transformedValue.getString("numberField"));
+        assertEquals(42, transformedValue.getInt32("numberField"));
+
+        Struct addFieldStruct = (Struct) transformedValue.get("addField");
+        assertNotNull(addFieldStruct);
+        assertEquals("Gio", addFieldStruct.getString("name"));
+
+        // Optional: check that id/name are NOT in the resulting struct
+        assertThrows(org.apache.kafka.connect.errors.DataException.class, () -> transformedValue.getInt32("id"));
 
         System.out.println("KEY:" + transformedRecord.key());
         System.out.println("VALUE:" + transformedRecord.value());
     }
-
-
 }

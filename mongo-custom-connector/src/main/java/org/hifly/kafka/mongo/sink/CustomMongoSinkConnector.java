@@ -31,7 +31,7 @@ public class CustomMongoSinkConnector extends SinkConnector {
 
     @Override
     public ConfigDef config() {
-        return new ConfigDef(); // For production, define your config fields
+        return new ConfigDef();
     }
 
     @Override

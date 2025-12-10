@@ -23,7 +23,6 @@ This document contains a curated list of relevant tags for the `kafka-connect-ex
 - `data-integration`
 - `etl`
 - `cdc`
-- `change-data-capture`
 
 ### Data Processing
 - `data-transformation`

@@ -90,7 +90,7 @@ Extracts JSON content from a string field and promotes nested JSON fields to top
 - **MongoDB**: 4.x or later (for CustomMongoSinkConnector)
 - **Oracle JDBC Driver**: 19.3 (for OracleRawToBsonKeyConverter)
 
-## 🚀 Building the Project
+## Building the Project
 
 ### Main Project (Converters & SMTs)
 

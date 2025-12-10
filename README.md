@@ -37,7 +37,7 @@ A custom MongoDB sink connector with advanced features:
 #### OracleRawToBsonKeyConverter
 **Class:** `org.hifly.kafka.OracleRawToBsonKeyConverter`
 
-Converts Oracle RAW data type (`byte[]`) to BSON format, enabling seamless integration between Oracle databases and MongoDB through Kafka Connect.
+Converts byte arrays containing Oracle RAW data to BSON format, enabling seamless integration between Oracle databases and MongoDB through Kafka Connect.
 
 **Use Cases:**
 - Oracle CDC to MongoDB replication

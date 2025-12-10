@@ -2,7 +2,7 @@
 
 A collection of custom Kafka Connect components providing additional connectors, converters, and Single Message Transformations (SMTs) for Apache Kafka.
 
-## 📋 Overview
+## Overview
 
 This repository contains custom Kafka Connect add-ons designed to extend Kafka Connect capabilities with specialized functionality for MongoDB integration, Oracle data type conversion, and JSON message transformation.
 
@@ -11,7 +11,7 @@ This repository contains custom Kafka Connect add-ons designed to extend Kafka C
 - **Converters** - Data type converters for specialized formats
 - **SMTs** - Single Message Transformations for record manipulation
 
-## ✨ Features
+## Features
 
 ### Connectors
 
@@ -82,9 +82,9 @@ Extracts JSON content from a string field and promotes nested JSON fields to top
 - Converting JSON strings to structured data for downstream processing
 - Preparing data for systems that don't handle nested JSON well
 
-## 🔧 Prerequisites
+## Prerequisites
 
-- **Java**: JDK 11 or later (main project), JDK 17 or later (mongo-custom-connector)
+- **Java**: JDK 11 or later (main project)
 - **Maven**: 3.6.0 or later
 - **Apache Kafka**: 3.5.0+ (for connectors and SMTs)
 - **MongoDB**: 4.x or later (for CustomMongoSinkConnector)
@@ -154,7 +154,7 @@ cd mongo-custom-connector
 mvn clean test
 ```
 
-## 📦 Installation
+## Installation
 
 ### Installing Converters & SMTs
 
@@ -162,7 +162,7 @@ mvn clean test
 2. Copy the JAR to your Kafka Connect plugin path:
 
 ```bash
-cp target/kafka-connect-extensions-1.9.1.jar $KAFKA_HOME/libs/
+cp target/kafka-connect-extensions-1.9.1.jar $KAFKA_CONNECT_PLUGIN_PATH
 ```
 
 3. Restart Kafka Connect workers
@@ -178,7 +178,7 @@ unzip mongo-custom-connector/target/mongo-custom-sink-0.1.0.zip -d $KAFKA_CONNEC
 
 3. Restart Kafka Connect workers
 
-## 📖 Usage Examples
+## Usage Examples
 
 ### Using JsonKeyToValue SMT
 
@@ -243,26 +243,7 @@ unzip mongo-custom-connector/target/mongo-custom-sink-0.1.0.zip -d $KAFKA_CONNEC
 }
 ```
 
-## 🏗️ Project Structure
-
-```
-kafka-connect-extensions/
-├── src/main/java/org/hifly/kafka/
-│   ├── smt/
-│   │   ├── JsonKeyToValue.java
-│   │   └── ExplodeJsonString.java
-│   ├── OracleRawToBsonKeyConverter.java
-│   ├── ByteArrayAndStringConverter.java
-│   └── ConversionUtility.java
-├── mongo-custom-connector/
-│   └── src/main/java/org/hifly/kafka/mongo/sink/
-│       ├── CustomMongoSinkConnector.java
-│       └── CustomMongoSinkTask.java
-├── pom.xml
-└── README.md
-```
-
-## 🔬 Running the Classes
+##  Running the Classes
 
 ### Testing Converters and SMTs
 
@@ -294,20 +275,20 @@ curl -X POST http://localhost:8083/connectors \
 
 The MongoDB connector can be tested using the unit tests included in the project, or deployed to a running Kafka Connect cluster as shown above.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit issues or pull requests.
 
-## 📄 License
+## License
 
 This project is available under the MIT License.
 
-## 🔗 Links
+## Links
 
 - [Apache Kafka Documentation](https://kafka.apache.org/documentation/)
 - [Kafka Connect Documentation](https://kafka.apache.org/documentation/#connect)
 - [MongoDB Connector Guide](https://docs.mongodb.com/kafka-connector/)
 
-## 📧 Support
+## Support
 
 For issues, questions, or contributions, please visit the GitHub repository.

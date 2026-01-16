@@ -23,7 +23,6 @@ public class CustomMongoSinkTask extends SinkTask {
 
     private MongoCollection<BsonDocument> collection;
     private String arrayField;
-    private String idField;
     private String dedupArrayFieldKeys;
     private MongoClient mongoClient;
 
@@ -34,7 +33,6 @@ public class CustomMongoSinkTask extends SinkTask {
             .getDatabase(props.get("database"))
             .getCollection(props.get("collection"), BsonDocument.class);
         arrayField = props.get("doc.array.field.name");
-        idField = props.get("doc.id.name");
         dedupArrayFieldKeys = props.get("doc.array.field.dedup.keys");
     }
 
@@ -46,16 +44,14 @@ public class CustomMongoSinkTask extends SinkTask {
             if (record.value() == null) {
                 String keyRaw = record.key().toString();
                 String keyResult = getKeyResult(keyRaw);
-                BsonDocument idDoc = new BsonDocument(idField, new BsonString(keyResult));
                 log.debug("Delete doc with id {}", keyResult);
-                collection.deleteOne(Filters.eq("_id", idDoc));
+                collection.deleteOne(Filters.eq("_id", new BsonString(keyResult)));
                 continue;
             }
 
             BsonDocument valueDoc = convertToBsonDocument(record.value());
             String keyRaw = record.key().toString();
             String keyResult = getKeyResult(keyRaw);
-            BsonDocument idDoc = new BsonDocument(idField, new BsonString(keyResult));
 
             if (!valueDoc.containsKey(arrayField)) {
                 log.warn("Message does not contain element {} - It will be skipped", arrayField);
@@ -63,7 +59,7 @@ public class CustomMongoSinkTask extends SinkTask {
             }
 
             BsonValue newArrayElement = valueDoc.get(arrayField);
-            BsonDocument existingDoc = collection.find(Filters.eq("_id", idDoc)).first();
+            BsonDocument existingDoc = collection.find(Filters.eq("_id", new BsonString(keyResult))).first();
 
             if (existingDoc != null) {
                 log.debug("Existing doc found {}", existingDoc);
@@ -101,12 +97,12 @@ public class CustomMongoSinkTask extends SinkTask {
                 dedupeArrayField.addAll(latestMap.values());
                 existingDoc.put(arrayField, dedupeArrayField);
 
-                log.debug("Replace document {}", idDoc);
-                collection.replaceOne(Filters.eq("_id", idDoc), existingDoc);
+                log.debug("Replace document {}", keyResult);
+                collection.replaceOne(Filters.eq("_id", new BsonString(keyResult)), existingDoc);
 
             } else {
                 // New doc: all fields from incoming, "arrayField" as array
-                valueDoc.put("_id", idDoc);
+                valueDoc.put("_id", new BsonString(keyResult));
                 BsonArray arrayFieldArray = new BsonArray();
                 arrayFieldArray.add(newArrayElement);
                 valueDoc.put(arrayField, arrayFieldArray);
@@ -118,7 +114,7 @@ public class CustomMongoSinkTask extends SinkTask {
 
     private static String getKeyResult(String keyRaw) {
         String keyResult;
-        if (keyRaw.startsWith("Struct") && keyRaw.contains("_id=")) {
+        if (keyRaw.contains("_id=")) {
             java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("_id=\"([^\"]+)\"").matcher(keyRaw);
             if (matcher.find()) {
                 keyResult = matcher.group(1);
@@ -128,7 +124,14 @@ public class CustomMongoSinkTask extends SinkTask {
         } else {
             keyResult = keyRaw;
         }
-        return keyResult;
+
+        log.debug("_id value to store {}", keyResult);
+
+        String cleanKey = keyResult.replaceAll("^\"+|\"+$", "");
+
+        log.debug("_id value cleaned to store {}", cleanKey);
+
+        return cleanKey;
     }
 
     @Override

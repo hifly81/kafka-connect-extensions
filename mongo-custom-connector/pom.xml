@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.hifly.kafka</groupId>
-    <version>0.1.0</version>
+    <version>0.2.3</version>
     <artifactId>mongo-custom-sink</artifactId>
     <packaging>jar</packaging>
 

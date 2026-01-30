@@ -10,6 +10,7 @@ This repository contains custom Kafka Connect add-ons designed to extend Kafka C
 - **Connectors** - Custom sink connectors for external systems
 - **Converters** - Data type converters for specialized formats
 - **SMTs** - Single Message Transformations for record manipulation
+- **Write Model Strategies** - Custom MongoDB write strategies for conditional upserts
 
 ## Features
 
@@ -29,6 +30,20 @@ A custom MongoDB sink connector with advanced features:
 - Maintaining aggregated data in MongoDB with unique array elements
 - CDC (Change Data Capture) scenarios requiring upserts and deletes
 - Event sourcing with array-based event logs
+
+---
+
+#### MongoDB Write Model Strategies
+**Class:** `org.hifly.kafka.mongo.writestrategy.UpdateIfNewerByDateStrategy`
+
+A custom MongoDB write model strategy for the MongoDB Kafka Sink that performs conditional upserts based on a logical update timestamp field (e.g. lastModificationDate):
+- **Conditional Upsert**: Performs an UpdateOne with upsert=true only whenthe target document does not exist, or the incoming date value is more recent than the one stored in MongoDB
+- **No Overwrite on Older Data**: If the existing document has a newer date value than the incoming record, the update is a no-op (the document is left unchanged).
+
+**Use Cases:**
+- CDC pipelines where events can arrive out of order and you must avoid overwriting newer state with older events.
+- Snapshot + incremental update scenarios where the date represents the business last-update timestamp.
+- Integrations where MongoDB must always reflect the most recent logical version of a record, not just the last processed event.
 
 ---
 
@@ -119,7 +134,7 @@ mvn clean compile
 mvn clean package
 ```
 
-The output JAR will be located at: `target/kafka-connect-extensions-1.9.1.jar`
+The output JAR will be located at: `target/kafka-connect-extensions-<version>.jar`
 
 #### 3. Run Tests
 
@@ -145,7 +160,7 @@ mvn clean compile
 mvn clean compile assembly:single
 ```
 
-The output will be located at: `mongo-custom-connector/target/mongo-custom-sink-0.1.0.zip`
+The output will be located at: `mongo-custom-connector/target/mongo-custom-sink-<version>.zip`
 
 #### 2. Run Tests
 
@@ -162,7 +177,7 @@ mvn clean test
 2. Copy the JAR to your Kafka Connect plugin path:
 
 ```bash
-cp target/kafka-connect-extensions-1.9.1.jar $KAFKA_CONNECT_PLUGIN_PATH
+cp target/kafka-connect-extensions-<version>.jar $KAFKA_CONNECT_PLUGIN_PATH
 ```
 
 3. Restart Kafka Connect workers
@@ -173,7 +188,7 @@ cp target/kafka-connect-extensions-1.9.1.jar $KAFKA_CONNECT_PLUGIN_PATH
 2. Extract the distribution:
 
 ```bash
-unzip mongo-custom-connector/target/mongo-custom-sink-0.1.0.zip -d $KAFKA_CONNECT_PLUGINS/
+unzip mongo-custom-connector/target/mongo-custom-sink-<version>.zip -d $KAFKA_CONNECT_PLUGINS/
 ```
 
 3. Restart Kafka Connect workers
@@ -227,6 +242,29 @@ unzip mongo-custom-connector/target/mongo-custom-sink-0.1.0.zip -d $KAFKA_CONNEC
     "key.converter": "org.apache.kafka.connect.storage.StringConverter",
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable": "false"
+  }
+}
+```
+
+### Using CustomMongoSinkConnector
+
+```json
+{
+  "name": "mongo-sink-conditional-upsert",
+  "config": {
+    "connector.class": "org.hifly.kafka.mongo.writestrategy.UpdateIfNewerByDateStrategy",
+    "tasks.max": "1",
+    "topics": "your-topic",
+    "connection.uri": "mongodb://localhost:27017",
+    "database": "your-database",
+    "collection": "your-collection",
+    "document.id.strategy": "com.mongodb.kafka.connect.sink.processor.id.strategy.ProvidedInKeyStrategy",
+    "document.id.strategy.overwrite.existing": "true",
+    "upsert.date.field.name": "lastUpdateTs",
+    "post.processor.chain": "com.mongodb.kafka.connect.sink.processor.DocumentIdAdder",
+    "writemodel.strategy": "your.package.UpdateIfNewerByDataAggiornamentoStrategy",
+    "delete.on.null.values": "true",
+    "delete.writemodel.strategy": "com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneDefaultStrategy"
   }
 }
 ```

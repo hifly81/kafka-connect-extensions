@@ -246,7 +246,7 @@ unzip mongo-custom-connector/target/mongo-custom-sink-<version>.zip -d $KAFKA_CO
 }
 ```
 
-### Using CustomMongoSinkConnector
+### Using UpdateIfNewerByDataAggiornamentoStrategy
 
 ```json
 {
@@ -262,7 +262,7 @@ unzip mongo-custom-connector/target/mongo-custom-sink-<version>.zip -d $KAFKA_CO
     "document.id.strategy.overwrite.existing": "true",
     "upsert.date.field.name": "lastUpdateTs",
     "post.processor.chain": "com.mongodb.kafka.connect.sink.processor.DocumentIdAdder",
-    "writemodel.strategy": "your.package.UpdateIfNewerByDataAggiornamentoStrategy",
+    "writemodel.strategy": "org.hifly.kafka.mongo.writestrategy.UpdateIfNewerByDataAggiornamentoStrategy",
     "delete.on.null.values": "true",
     "delete.writemodel.strategy": "com.mongodb.kafka.connect.sink.writemodel.strategy.DeleteOneDefaultStrategy"
   }

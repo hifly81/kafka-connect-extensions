@@ -7,7 +7,9 @@ A collection of custom Kafka Connect components providing additional connectors,
 This repository contains custom Kafka Connect add-ons designed to extend Kafka Connect capabilities with specialized functionality for MongoDB integration, Oracle data type conversion, and JSON message transformation.
 
 **Components:**
-- **Connectors** - Custom sink connectors for external systems
+- **Connectors**
+    - Custom **sink** connector for MongoDB
+    - Custom **source** connector for MongoDB (incremental polling + aggregation pipeline)
 - **Converters** - Data type converters for specialized formats
 - **SMTs** - Single Message Transformations for record manipulation
 - **Write Model Strategies** - Custom MongoDB write strategies for conditional upserts
@@ -32,6 +34,43 @@ A custom MongoDB sink connector with advanced features:
 - Event sourcing with array-based event logs
 
 ---
+
+#### CustomMongoSourceConnector (Incremental MongoDB Source)
+
+**Class:** `org.hifly.kafka.mongo.source.MongoQuerySourceConnector`
+
+A custom MongoDB **source connector** that periodically polls a MongoDB collection and publishes results to a Kafka topic, with support for:
+
+- **Incremental fetch over time intervals**
+    - `time.field`: name of the timestamp/datetime field (for example `lastUpdateDate`)
+    - It reads documents where `time.field` is in the range `(lastProcessedTs, now]`
+    - The Kafka Connect offset stores the last processed timestamp (`lastProcessedTs`)
+
+- **Simple query or Aggregation Pipeline**
+    - `mongo.base.filter`  
+      JSON string with a Mongo filter document (for example `{"status": "ACTIVE"}`), used with `find(...)`
+    - `mongo.pipeline`  
+      JSON string representing an **array of aggregation stages** (for example `[{"$match": {...}}, {"$project": {...}}]`).  
+      If configured, the task uses `collection.aggregate(pipeline + time-window $match)` instead of `find`.
+
+- **Output format**
+    - `output.format=json`  
+      Kafka value is a **schemaless JSON string** (`Schema.STRING_SCHEMA`)
+    - `output.format=avro`  
+      Kafka value is an Avro `Struct` with a predefined schema (for example `_id`, `payload`, `timestamp`)
+
+- **Kafka key selection**
+    - `mongo.key.field`  
+      Name (optionally a dotted path) of the Mongo document field to use as the **Kafka key** (string)
+    - If not set, the default key is the document `_id`
+
+
+**Use Cases:**
+- Incremental polling of a collection/table based on a timestamp field
+- Enrichment on MongoDB side with `$lookup`, `$project`, `$group`, and other aggregation stages
+- Publishing to Kafka **only documents that have not been processed yet** (idempotent / incremental behavior)
+
+
 
 #### MongoDB Write Model Strategies
 **Class:** `org.hifly.kafka.mongo.writestrategy.UpdateIfNewerByDateStrategy`
@@ -144,14 +183,15 @@ mvn clean test
 
 ---
 
-### MongoDB Custom Connector
+### MongoDB Custom Connectors
 
-The MongoDB custom connector is a separate module with its own build configuration.
+The MongoDB custom connectors are in separate modules with their own build configurations.
 
 #### 1. Build the Connector
 
 ```bash
 cd mongo-custom-connector
+cd mongo-source-custom-connector
 
 # Compile the project
 mvn clean compile
@@ -160,7 +200,9 @@ mvn clean compile
 mvn clean compile assembly:single
 ```
 
-The output will be located at: `mongo-custom-connector/target/mongo-custom-sink-<version>.zip`
+The output will be located at: 
+    - `mongo-custom-connector/target/mongo-custom-sink-<version>.zip`
+    - `mongo-source-custom-connector/target/mongo-source-poll-<version>.zip`
 
 #### 2. Run Tests
 
@@ -182,13 +224,17 @@ cp target/kafka-connect-extensions-<version>.jar $KAFKA_CONNECT_PLUGIN_PATH
 
 3. Restart Kafka Connect workers
 
-### Installing MongoDB Connector
+### Installing MongoDB Connectors
 
-1. Build the connector package as described above
+1. Build the connector packages as described above
 2. Extract the distribution:
 
 ```bash
 unzip mongo-custom-connector/target/mongo-custom-sink-<version>.zip -d $KAFKA_CONNECT_PLUGINS/
+```
+
+```bash
+unzip mongo-source-custom-connector/target/mongo-source-poll-<version>.zip -d $KAFKA_CONNECT_PLUGINS/
 ```
 
 3. Restart Kafka Connect workers
@@ -243,6 +289,43 @@ unzip mongo-custom-connector/target/mongo-custom-sink-<version>.zip -d $KAFKA_CO
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable": "false"
   }
+}
+```
+
+### Using CustomMongoSourceConnector
+
+```json
+{
+  "name": "mongo-query-source-json",
+  "config": {
+    "connector.class": "com.example.connect.mongo.MongoQuerySourceConnector",
+    "tasks.max": "1",
+    "topic": "mongo.pipeline.output",
+    "mongo.uri": "mongodb://user:pass@host:27017/db",
+    "mongo.database": "mydb",
+    "mongo.collection": "orders",
+    "time.field": "lastUpdateDate",
+    "mongo.key.field": "idProduct",
+    "poll.interval.ms": "60000",
+    "output.format": "json",
+
+    "mongo.pipeline": "[ \
+{\"$lookup\": { \
+\"from\": \"order.details\", \
+\"localField\": \"idProduct\", \
+\"foreignField\": \"idProduct\", \
+\"as\": \"d\", \
+\"pipeline\": [ { \"$limit\": 1 } ] \
+}}, \
+{\"$match\": { \"d\": { \"$size\": 0 } }}, \
+{\"$project\": { \
+\"_id\": 1, \
+\"idProduct\": 1 } \
+} ] \
+} \
+}} \
+]"
+}
 }
 ```
 
@@ -309,9 +392,9 @@ curl -X POST http://localhost:8083/connectors \
   -d @your-connector-config.json
 ```
 
-### Testing MongoDB Connector
+### Testing MongoDB Connectors
 
-The MongoDB connector can be tested using the unit tests included in the project, or deployed to a running Kafka Connect cluster as shown above.
+The MongoDB connectors can be tested using the unit tests included in the project and a local mongodb instance running, or deployed to a running Kafka Connect cluster as shown above.
 
 ## Contributing
 

@@ -1,0 +1,36 @@
+{
+  "name" : "mongo-source-custom",
+  "version" : "0.1.0",
+  "title" : "Mongo Source Custom Connector",
+  "description" : "Mongo Source Custom Connector",
+  "logo" : "assets/hifly.png",
+  "owner" : {
+    "username" : "hifly",
+    "type" : "organization",
+    "name" : "hifly.io",
+    "url" : "https://hifly.io",
+    "logo" : "assets/hifly.png"
+  },
+  "support" : {
+    "summary" : "",
+    "url" : "",
+    "provider_name" : "Community Support"
+  },
+  "tags" : [ "kafka", "mongo" ],
+  "requirements" : [ "Apache Kafka 1.x or later" ],
+  "features" : {
+    "supported_encodings" : [ "any" ],
+    "single_message_transforms" : true,
+    "kafka_connect_api" : true,
+    "delivery_guarantee": ["at_least_once"]
+  },
+  "documentation_url" : "https://hifly.io",
+  "source_url" : "https://hifly.io",
+  "docker_image" : { },
+  "license" : [ {
+    "name" : "MIT License",
+    "url" : "https://hifly.io"
+  } ],
+  "component_types" : [ "source" ],
+  "release_date" : "2026-02-06"
+}

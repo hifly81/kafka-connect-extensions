@@ -141,7 +141,7 @@ Extracts JSON content from a string field and promotes nested JSON fields to top
 - **Java**: JDK 11 or later (main project)
 - **Maven**: 3.6.0 or later
 - **Apache Kafka**: 3.5.0+ (for connectors and SMTs)
-- **MongoDB**: 4.x or later (for CustomMongoSinkConnector)
+- **MongoDB**: 4.x or later (for mongo custom connectors and mongo write strategy)
 - **Oracle JDBC Driver**: 19.3 (for OracleRawToBsonKeyConverter)
 
 ## Building the Project
@@ -213,7 +213,7 @@ mvn clean test
 
 ## Installation
 
-### Installing Converters & SMTs
+### Installing Converters, Mongo Write Strategy & SMTs
 
 1. Build the main project JAR as described above
 2. Copy the JAR to your Kafka Connect plugin path:
@@ -329,7 +329,7 @@ unzip mongo-source-custom-connector/target/mongo-source-poll-<version>.zip -d $K
 }
 ```
 
-### Using UpdateIfNewerByDataAggiornamentoStrategy
+### Using UpdateIfNewerByDateStrategy
 
 ```json
 {
@@ -392,7 +392,7 @@ curl -X POST http://localhost:8083/connectors \
   -d @your-connector-config.json
 ```
 
-### Testing MongoDB Connectors
+### Testing MongoDB Connectors and MongoDB Write Strategy
 
 The MongoDB connectors can be tested using the unit tests included in the project and a local mongodb instance running, or deployed to a running Kafka Connect cluster as shown above.
 

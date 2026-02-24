@@ -7,6 +7,11 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.Aggregates;
+import com.mongodb.ConnectionString;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.client.MongoClients;
+import com.mongodb.event.CommandStartedEvent;
+import com.mongodb.event.CommandListener;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
@@ -71,12 +76,36 @@ public class MongoQuerySourceTask extends SourceTask {
         this.timeField = config.timeField();
         this.pollIntervalMs = config.pollIntervalMs();
 
-        this.client = MongoClients.create(uri);
+        ConnectionString connectionString = new ConnectionString(uri);
+
+        MongoClientSettings settings = MongoClientSettings.builder()
+                .applyConnectionString(connectionString)
+                .addCommandListener(new CommandListener() {
+                    @Override
+                    public void commandStarted(CommandStartedEvent event) {
+                        if ("aggregate".equals(event.getCommandName())) {
+                            log.debug("--- MONGODB AGGREGATION QUERY ---");
+                            log.debug(event.getCommand().toJson());
+                            log.debug("---------------------------------");
+                        }
+                    }
+
+                    @Override
+                    public void commandSucceeded(com.mongodb.event.CommandSucceededEvent event) {}
+
+                    @Override
+                    public void commandFailed(com.mongodb.event.CommandFailedEvent event) {
+                        log.error("Query failed: " + event.getThrowable().getMessage());
+                    }
+                })
+                .build();
+
+
+        this.client = MongoClients.create(settings);
         this.collection = client.getDatabase(dbName).getCollection(collName);
         this.lastPollTime = System.currentTimeMillis();
         this.keyField = config.keyField();
 
-        // output format
         String fmt = config.outputFormat().toLowerCase(Locale.ROOT);
         if (MongoQuerySourceConfig.OUTPUT_FORMAT_AVRO.equals(fmt)) {
             this.outputFormat = OutputFormat.AVRO;
@@ -104,8 +133,7 @@ public class MongoQuerySourceTask extends SourceTask {
             } else if (tsObj instanceof String) {
                 this.lastProcessedTs = Long.parseLong((String) tsObj);
             } else {
-                log.warn("{}. Ignore offset.",
-                        tsObj.getClass());
+                log.warn("{}. Ignore offset.", tsObj.getClass());
                 this.lastProcessedTs = INITIAL_TS;
             }
         } else {
@@ -122,85 +150,98 @@ public class MongoQuerySourceTask extends SourceTask {
         long now = System.currentTimeMillis();
         long elapsed = now - lastPollTime;
 
+        log.debug("Last Poll Time {} - Elapsed {}", lastPollTime, elapsed);
+
         if (elapsed < pollIntervalMs) {
-            long sleepMs = pollIntervalMs - elapsed;
-            log.debug("Sleeping {} ms before next poll", sleepMs);
-            Thread.sleep(sleepMs);
+           long sleepMs = pollIntervalMs - elapsed;
+           log.info("Sleeping {} ms before next poll", sleepMs);
+           Thread.sleep(sleepMs);
         }
+
         lastPollTime = System.currentTimeMillis();
-        long windowEnd = lastPollTime;
 
         String baseFilterJson = config.baseFilterJson();
         Bson baseFilter;
         try {
             baseFilter = Document.parse(baseFilterJson);
         } catch (Exception e) {
-            log.warn("Can't parse mongo.base.filter='{}'. Empty filter. Errore: {}",
-                    baseFilterJson, e.getMessage());
+            log.warn("Can't parse mongo.base.filter='{}'. Empty filter. Errore: {}", baseFilterJson, e.getMessage());
             baseFilter = new Document();
         }
 
-        Bson timeFilter;
-
-        Date fromExclusive = new Date(lastProcessedTs);
-        Date toInclusive = new Date(windowEnd);
-        timeFilter = Filters.and(
-                baseFilter,
-                Filters.gt(timeField, fromExclusive),
-                Filters.lte(timeField, toInclusive)
-        );
-
         Iterable<Document> cursor;
 
-        // Usage --> pipeline
+        // Pipeline
         if (!basePipeline.isEmpty()) {
-            List<Bson> effectivePipeline = new ArrayList<>(basePipeline);
-            effectivePipeline.add(Aggregates.match(timeFilter));
+            List<Bson> effectivePipeline = new ArrayList<>();
+
+            if (!baseFilter.toBsonDocument(Document.class, collection.getCodecRegistry()).isEmpty()) {
+                effectivePipeline.add(Aggregates.match(baseFilter));
+            }
+
+            effectivePipeline.addAll(basePipeline);
+
+            log.debug("effectivePipeline {}", effectivePipeline);
+
+            long nowPipeline = System.currentTimeMillis();
             cursor = collection.aggregate(effectivePipeline);
+            long endPipeline = System.currentTimeMillis();
+
+            log.debug("Pipeline executed elapsed time={}", endPipeline - nowPipeline);
+
         } else {
-            // No pipeline: fallback a find() + sort come prima
-            cursor = collection
-                    .find(timeFilter)
-                    .sort(Sorts.ascending(timeField));
+            // No pipeline
+            if (!baseFilter.toBsonDocument(Document.class, collection.getCodecRegistry()).isEmpty()) {
+                cursor = collection.find(baseFilter).sort(Sorts.ascending(timeField));
+            } else {
+                cursor = collection.find().sort(Sorts.ascending(timeField));
+            }
         }
 
-
         List<SourceRecord> records = new ArrayList<>();
-        long maxTsInBatch = (lastProcessedTs == null) ? Long.MIN_VALUE : lastProcessedTs;
+        int counter = 0;
 
         for (Document doc : cursor) {
+
+            log.debug("Document to be fetched {} - counter  {}", doc, counter);
+
             Object tsObj = doc.get(timeField);
-            if (!(tsObj instanceof Date)) {
-                // skip...
-                continue;
+            Long ts = null;
+            if (tsObj instanceof Date) {
+                ts = ((Date) tsObj).getTime();
             }
-            long ts = ((Date) tsObj).getTime();
-            // ... update maxTsInBatch ...
 
             Object keyValueObj = extractKeyFromDocument(doc);
+
             String key;
             if (keyValueObj == null) {
-                log.warn("mongo.key.field='{}'. Fallback on _id. doc={}",
-                        keyField, doc.toJson());
+                log.warn("mongo.key.field='{}'. Fallback on _id. doc={}", keyField, doc.toJson());
                 Object fallbackId = doc.get("_id");
                 key = (fallbackId != null) ? String.valueOf(fallbackId) : null;
             } else {
                 key = String.valueOf(keyValueObj);
             }
 
+            log.debug("Document to be fetched, key {} - counter  {}", key, counter);
+
             Map<String, Object> partition = sourcePartition(
                     collection.getNamespace().getDatabaseName(),
                     collection.getNamespace().getCollectionName());
-            Map<String, Object> offset = Collections.singletonMap("lastProcessedTs", ts);
+
+            Map<String, Object> offset = Collections.singletonMap(
+                    "lastProcessedTs",
+                    ts != null ? ts : 0L
+            );
 
             SourceRecord record;
+
             if (outputFormat == OutputFormat.JSON) {
                 String valueJson = doc.toJson();
                 record = new SourceRecord(
                         partition,
                         offset,
                         topic,
-                        keySchema,    // tipicamente Schema.STRING_SCHEMA
+                        keySchema,
                         key,
                         valueSchema,
                         valueJson
@@ -210,13 +251,13 @@ public class MongoQuerySourceTask extends SourceTask {
                 Struct valueStruct = new Struct(AVRO_VALUE_SCHEMA)
                         .put("_id", doc.get("_id") != null ? doc.get("_id").toString() : null)
                         .put("payload", valueJson)
-                        .put("timestamp", ts);
+                        .put("timestamp", ts != null ? ts : 0L);
 
                 record = new SourceRecord(
                         partition,
                         offset,
                         topic,
-                        keySchema,   // STRING_SCHEMA
+                        keySchema,
                         key,
                         valueSchema,
                         valueStruct
@@ -224,15 +265,12 @@ public class MongoQuerySourceTask extends SourceTask {
             }
 
             records.add(record);
+            counter++;
         }
 
-        if (maxTsInBatch != Long.MIN_VALUE) {
-            lastProcessedTs = maxTsInBatch;
-            log.info("Poll done: prodotti {} record, new lastProcessedTs={}",
-                    records.size(), lastProcessedTs);
-        } else {
-            log.info("Poll done: no new records.");
-        }
+
+        log.debug("Output Format: {} record", outputFormat == OutputFormat.JSON? "json":"avro");
+        log.debug("Poll done: {} record", records.size());
 
         return records;
     }
@@ -264,8 +302,7 @@ public class MongoQuerySourceTask extends SourceTask {
             }
             return stages;
         } catch (Exception e) {
-            log.warn("Can't parse mongo.pipeline='{}'. Empty pipeline. Error: {}",
-                    json, e.getMessage());
+            log.warn("Can't parse mongo.pipeline='{}'. Empty pipeline. Error: {}", json, e.getMessage());
             return Collections.emptyList();
         }
     }
